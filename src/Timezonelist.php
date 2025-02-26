@@ -2,6 +2,9 @@
 
 namespace Realodix\Timezonelist;
 
+use Illuminate\Support\Arr;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 use Realodix\Timezonelist\Exceptions\OutOfScopeTimezoneException;
 
 class Timezonelist
@@ -49,12 +52,9 @@ class Timezonelist
      */
     public function toSelectBox(string $name, ?string $selected = null, ?array $attrs = null): string
     {
-        $attributes = '';
-        if (!empty($attrs)) {
-            foreach ($attrs as $attr_name => $attr_value) {
-                $attributes .= ' '.$attr_name.'="'.$attr_value.'"';
-            }
-        }
+        $attributes = collect($attrs)
+            ->map(fn ($value, $key) => "{$key}=\"{$value}\"")
+            ->implode(' ');
 
         return $this->makeSelectTag($name, $selected, $attributes, $this->splitGroup);
     }
@@ -68,41 +68,27 @@ class Timezonelist
      */
     public function toArray(): array
     {
-        $list = [];
-
-        // If not splitting time zones by continental group
-        if (!$this->splitGroup) {
+        return tap(Collection::make(), function (Collection $list) {
             if ($this->includeGeneral()) {
                 $timezone = 'UTC';
-                $list[$timezone] = $this->formatTimezone($timezone);
+                $list->put(
+                    $this->splitGroup ? 'General' : $timezone,
+                    $this->splitGroup ? [$timezone => $this->formatTimezone($timezone)] : $this->formatTimezone($timezone)
+                );
             }
 
-            foreach ($this->loadContinents() as $continent => $mask) {
+            Collection::make($this->loadContinents())->each(function ($mask, $continent) use ($list) {
                 $timezones = \DateTimeZone::listIdentifiers($mask);
 
                 foreach ($timezones as $timezone) {
-                    $list[$timezone] = $this->formatTimezone($timezone);
+                    if ($this->splitGroup) {
+                        $list->put($continent, Arr::get($list->toArray(), $continent, []) + [$timezone => $this->formatTimezone($timezone, $continent)]);
+                    } else {
+                         $list->put($timezone, $this->formatTimezone($timezone));
+                    }
                 }
-            }
-
-            return $list;
-        }
-
-        // If splitting time zones by continental group
-        if ($this->includeGeneral()) {
-            $timezone = 'UTC';
-            $list['General'][$timezone] = $this->formatTimezone($timezone);
-        }
-
-        foreach ($this->loadContinents() as $continent => $mask) {
-            $timezones = \DateTimeZone::listIdentifiers($mask);
-
-            foreach ($timezones as $timezone) {
-                $list[$continent][$timezone] = $this->formatTimezone($timezone, $continent);
-            }
-        }
-
-        return $list;
+            });
+        })->toArray();
     }
 
     /**
@@ -111,12 +97,11 @@ class Timezonelist
      * @param array<string> $groups The continent/group names to include.
      * @return $this
      */
-    public function onlyGroups(array $groups = [])
+    public function onlyGroups(array $groups = []): self
     {
-        $this->groupsFilter = $groups;
-        $this->groupsFilter = array_map(function ($group) {
-            return ucfirst(strtolower($group));
-        }, $this->groupsFilter);
+        $this->groupsFilter = collect($groups)
+            ->map(fn ($group) => Str::ucfirst(Str::lower($group)))
+            ->all();
 
         return $this;
     }
@@ -127,7 +112,7 @@ class Timezonelist
      * @param array<string> $groups The continent/group names to exclude
      * @return $this
      */
-    public function excludeGroups(array $groups = [])
+    public function excludeGroups(array $groups = []): self
     {
         if (empty($groups)) {
             $this->groupsFilter = [];
@@ -135,11 +120,15 @@ class Timezonelist
             return $this;
         }
 
-        $groups = array_map(function ($group) {
-            return ucfirst(strtolower($group));
-        }, $groups);
+        $groups = collect($groups)
+            ->map(fn ($group) => Str::ucfirst(Str::lower($group)))
+            ->all();
 
-        $this->groupsFilter = array_values(array_diff(array_keys($this->continents), $groups));
+        $this->groupsFilter = collect($this->continents)
+            ->keys()
+            ->diff($groups)
+            ->values()
+            ->all();
 
         if (!in_array('General', $groups)) {
             $this->groupsFilter[] = 'General';
@@ -154,7 +143,7 @@ class Timezonelist
      * @param bool $value Whether to split into groups
      * @return $this
      */
-    public function splitGroup(bool $value = true)
+    public function splitGroup(bool $value = true): self
     {
         $this->splitGroup = $value;
 
@@ -167,7 +156,7 @@ class Timezonelist
      * @param bool $value Whether to display the offset
      * @return $this
      */
-    public function showOffset(bool $value = true)
+    public function showOffset(bool $value = true): self
     {
         $this->showOffset = $value;
 
@@ -188,52 +177,50 @@ class Timezonelist
             $this->validateTimezone($selected);
         }
 
-        $output = '<select name="'.$name.'"'.$attrs.'>';
+        $output = "<select name=\"{$name}\" {$attrs}>";
 
-        $options = [];
+        $options = Collection::make();
 
         if ($this->includeGeneral()) {
             if ($withGroup) {
-                $options[] = '<optgroup label="General">';
+                $options->push('<optgroup label="General">');
             }
 
             $timezone = 'UTC';
-            $options[] = $this->makeOptionTag(
+            $options->push($this->makeOptionTag(
                 $this->formatTimezone($timezone),
                 $timezone,
                 ($selected === $timezone),
-            );
+            ));
 
             if ($withGroup) {
-                $options[] = '</optgroup>';
+                $options->push('</optgroup>');
             }
         }
 
-        foreach ($this->loadContinents() as $continent => $mask) {
+        collect($this->loadContinents())->each(function ($mask, $continent) use ($options, $withGroup, $selected) {
             $timezones = \DateTimeZone::listIdentifiers($mask);
 
             if ($withGroup) {
-                $options[] = '<optgroup label="'.$continent.'">';
+                $options->push("<optgroup label=\"{$continent}\">");
             }
 
-            foreach ($timezones as $timezone) {
-                $continent = is_int($continent) ? null : $continent;
+            collect($timezones)->each(function ($timezone) use ($options, $continent, $withGroup, $selected) {
                 $cutOffContinent = $withGroup ? $continent : null;
 
-                $options[] = $this->makeOptionTag(
+                $options->push($this->makeOptionTag(
                     $this->formatTimezone($timezone, $cutOffContinent),
                     $timezone,
                     ($selected === $timezone),
-                );
-            }
+                ));
+            });
 
             if ($withGroup) {
-                $options[] = '</optgroup>';
+                $options->push('</optgroup>');
             }
-        }
+        });
 
-        // Join the options array into a single string
-        $output .= implode('', $options);
+        $output .= $options->implode('');
         $output .= '</select>';
 
         return $output;
@@ -250,7 +237,7 @@ class Timezonelist
     {
         $attrs = $selected ? ' selected="selected"' : '';
 
-        return '<option value="'.(string) $value.'"'.$attrs.'>'.(string) $display.'</option>';
+        return "<option value=\"{$value}\"{$attrs}>{$display}</option>";
     }
 
     /**
@@ -267,15 +254,11 @@ class Timezonelist
      */
     protected function loadContinents(): array
     {
-        if (empty($this->groupsFilter)) {
-            return $this->continents;
-        }
-
-        return array_filter(
-            $this->continents,
-            fn($key) => in_array($key, $this->groupsFilter),
-            ARRAY_FILTER_USE_KEY,
-        );
+        return collect($this->continents)
+            ->when(!empty($this->groupsFilter), function (Collection $collection) {
+                return $collection->filter(fn ($value, $key) => in_array($key, $this->groupsFilter));
+            })
+            ->all();
     }
 
     /**
@@ -289,14 +272,14 @@ class Timezonelist
         $displayedTz = empty($cutOffContinent) ? $timezone : substr($timezone, strlen($cutOffContinent) + 1);
         $normalizedTz = $this->normalizeTimezone($displayedTz);
 
-        if (!$this->showOffset) {
+        if (! $this->showOffset) {
             return $normalizedTz;
         }
 
         $offset = $this->getOffset($timezone);
         $separator = str_repeat(self::HTML_WHITESPACE, 3);
 
-        return '(UTC'.$offset.')'.$separator.$normalizedTz;
+        return "(UTC{$offset}){$separator}{$normalizedTz}";
     }
 
     /**
@@ -306,10 +289,7 @@ class Timezonelist
      */
     protected function normalizeTimezone(string $timezone): string
     {
-        $search = ['St_', '/', '_'];
-        $replace = ['St. ', ' / ', ' '];
-
-        return str_replace($search, $replace, $timezone);
+        return Str::replace(['St_', '/', '_'], ['St. ', ' / ', ' '], $timezone);
     }
 
     /**
@@ -331,7 +311,7 @@ class Timezonelist
      * @throws \InvalidArgumentException When the timezone is invalid
      * @throws OutOfScopeTimezoneException When the timezone is not within the specified groups
      */
-    protected function validateTimezone(string $timezone)
+    protected function validateTimezone(string $timezone): void
     {
         if (!in_array($timezone, \DateTimeZone::listIdentifiers())) {
             throw new \InvalidArgumentException('Invalid timezone: '.$timezone);
