@@ -30,6 +30,6 @@ echo $tz->splitGroup(false)->onlyGroups(['America', 'Asia'])
 
 $tz = new \Realodix\Timezonelist\Timezonelist;
 echo '<br><br>';
-echo 'onlyGroups([\'Arctic\', \'Atlantic\']) <br>';
-echo $tz->onlyGroups(['Arctic', 'Atlantic'])
+echo 'onlyGroups([\'Arctic\']) <br>';
+echo $tz->onlyGroups(['Arctic'])
     ->toSelectBox('timezone_only_america');
