@@ -11,8 +11,10 @@ class Timezonelist
 
     /**
      * Array of continents and their corresponding DateTimeZone constants.
+     *
+     * @var array
      */
-    protected array $continents = [
+    const CONTINENTS = [
         'Africa'     => \DateTimeZone::AFRICA,
         'America'    => \DateTimeZone::AMERICA,
         'Antarctica' => \DateTimeZone::ANTARCTICA,
@@ -128,7 +130,7 @@ class Timezonelist
     public function excludeGroups(array $groups)
     {
         $groups = $this->processGroupName($groups);
-        $this->groups = array_values(array_diff(array_keys($this->continents), $groups));
+        $this->groups = array_values(array_diff(array_keys(self::CONTINENTS), $groups));
 
         if (!in_array(self::GROUP_GENERAL, $groups)) {
             $this->groups[] = self::GROUP_GENERAL;
@@ -257,11 +259,11 @@ class Timezonelist
     protected function loadContinents(): array
     {
         if (empty($this->groups)) {
-            return $this->continents;
+            return self::CONTINENTS;
         }
 
         return array_filter(
-            $this->continents,
+            self::CONTINENTS,
             fn($key) => in_array($key, $this->groups),
             ARRAY_FILTER_USE_KEY,
         );
