@@ -7,6 +7,7 @@ use Realodix\Timezonelist\Exceptions\OutOfScopeTimezoneException;
 class Timezonelist
 {
     const HTML_WHITESPACE = '&nbsp;';
+    const GROUP_GENERAL = 'General';
 
     /**
      * Array of continents and their corresponding DateTimeZone constants.
@@ -91,7 +92,7 @@ class Timezonelist
         // If splitting time zones by continental group
         if ($this->includeGeneral()) {
             $timezone = 'UTC';
-            $list['General'][$timezone] = $this->formatTimezone($timezone);
+            $list[self::GROUP_GENERAL][$timezone] = $this->formatTimezone($timezone);
         }
 
         foreach ($this->loadContinents() as $continent => $mask) {
@@ -129,8 +130,8 @@ class Timezonelist
         $groups = $this->processGroupName($groups);
         $this->groups = array_values(array_diff(array_keys($this->continents), $groups));
 
-        if (!in_array('General', $groups)) {
-            $this->groups[] = 'General';
+        if (!in_array(self::GROUP_GENERAL, $groups)) {
+            $this->groups[] = self::GROUP_GENERAL;
         }
 
         return $this;
@@ -247,7 +248,7 @@ class Timezonelist
      */
     protected function includeGeneral(): bool
     {
-        return empty($this->groups) || in_array('General', $this->groups);
+        return empty($this->groups) || in_array(self::GROUP_GENERAL, $this->groups);
     }
 
     /**
