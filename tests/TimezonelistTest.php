@@ -60,7 +60,7 @@ class TimezonelistTest extends TestCase
     public function testAttributes(): void
     {
         $attrsArray = ['class' => 'form-control', 'id' => 'timezone-select'];
-        $outputArray = $this->tzList->toSelectBox('timezone_attrs_array', attrs: $attrsArray);
+        $outputArray = $this->tzList->onlyGroups(['Arctic'])->toSelectBox('timezone_attrs_array', attrs: $attrsArray);
         $this->assertStringContainsString('<select name="timezone_attrs_array" class="form-control" id="timezone-select">', $outputArray);
     }
 
@@ -166,7 +166,7 @@ class TimezonelistTest extends TestCase
 
     public function testNormalizeTimezone(): void
     {
-        $output = $this->tzList->toSelectBox('timezone_default');
+        $output = $this->tzList->onlyGroups(['America'])->toSelectBox('timezone_default');
         $this->assertStringContainsString(
             '<option value="America/Argentina/Rio_Gallegos">(UTC-03:00)&nbsp;&nbsp;&nbsp;Argentina / Rio Gallegos</option>',
             $output,
