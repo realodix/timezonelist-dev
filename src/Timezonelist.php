@@ -52,6 +52,12 @@ class Timezonelist
      */
     public function toSelectBox(string $name, ?string $selected = null, ?array $attrs = null): string
     {
+        $withGroup = $this->splitGroup;
+
+        if ($selected) {
+            $this->validateTimezone($selected);
+        }
+
         $attributes = '';
         if (!empty($attrs)) {
             foreach ($attrs as $attr_name => $attr_value) {
@@ -59,7 +65,55 @@ class Timezonelist
             }
         }
 
-        return $this->makeSelectTag($name, $selected, $attributes, $this->splitGroup);
+        $output = '<select name="'.$name.'"'.$attributes.'>';
+
+        $options = [];
+
+        if ($this->includeGeneral()) {
+            if ($withGroup) {
+                $options[] = '<optgroup label="General">';
+            }
+
+            $timezone = 'UTC';
+            $options[] = $this->makeOptionTag(
+                $this->formatTimezone($timezone),
+                $timezone,
+                ($selected === $timezone),
+            );
+
+            if ($withGroup) {
+                $options[] = '</optgroup>';
+            }
+        }
+
+        foreach ($this->loadContinents() as $continent => $mask) {
+            $timezones = \DateTimeZone::listIdentifiers($mask);
+
+            if ($withGroup) {
+                $options[] = '<optgroup label="'.$continent.'">';
+            }
+
+            foreach ($timezones as $timezone) {
+                $continent = is_int($continent) ? null : $continent;
+                $cutOffContinent = $withGroup ? $continent : null;
+
+                $options[] = $this->makeOptionTag(
+                    $this->formatTimezone($timezone, $cutOffContinent),
+                    $timezone,
+                    ($selected === $timezone),
+                );
+            }
+
+            if ($withGroup) {
+                $options[] = '</optgroup>';
+            }
+        }
+
+        // Join the options array into a single string
+        $output .= implode('', $options);
+        $output .= '</select>';
+
+        return $output;
     }
 
     /**
@@ -163,71 +217,6 @@ class Timezonelist
         $this->showOffset = $value;
 
         return $this;
-    }
-
-    /**
-     * Generates the HTML for the select element, including options and optional optgroups.
-     *
-     * @param string $name The name attribute of the select tag
-     * @param string|null $selected The value of the option to be pre-selected
-     * @param string|null $attrs Additional HTML attributes
-     * @param bool $withGroup Whether to use optgroup tags to group options
-     */
-    protected function makeSelectTag(string $name, ?string $selected, ?string $attrs, bool $withGroup): string
-    {
-        if ($selected) {
-            $this->validateTimezone($selected);
-        }
-
-        $output = '<select name="'.$name.'"'.$attrs.'>';
-
-        $options = [];
-
-        if ($this->includeGeneral()) {
-            if ($withGroup) {
-                $options[] = '<optgroup label="General">';
-            }
-
-            $timezone = 'UTC';
-            $options[] = $this->makeOptionTag(
-                $this->formatTimezone($timezone),
-                $timezone,
-                ($selected === $timezone),
-            );
-
-            if ($withGroup) {
-                $options[] = '</optgroup>';
-            }
-        }
-
-        foreach ($this->loadContinents() as $continent => $mask) {
-            $timezones = \DateTimeZone::listIdentifiers($mask);
-
-            if ($withGroup) {
-                $options[] = '<optgroup label="'.$continent.'">';
-            }
-
-            foreach ($timezones as $timezone) {
-                $continent = is_int($continent) ? null : $continent;
-                $cutOffContinent = $withGroup ? $continent : null;
-
-                $options[] = $this->makeOptionTag(
-                    $this->formatTimezone($timezone, $cutOffContinent),
-                    $timezone,
-                    ($selected === $timezone),
-                );
-            }
-
-            if ($withGroup) {
-                $options[] = '</optgroup>';
-            }
-        }
-
-        // Join the options array into a single string
-        $output .= implode('', $options);
-        $output .= '</select>';
-
-        return $output;
     }
 
     /**
