@@ -12,7 +12,7 @@ class Timezonelist
     /**
      * Array of continents and their corresponding DateTimeZone constants.
      *
-     * @var array
+     * @var array<string, int>
      */
     const CONTINENTS = [
         'Africa'     => \DateTimeZone::AFRICA,
@@ -52,68 +52,14 @@ class Timezonelist
      */
     public function toSelectBox(string $name, ?string $selected = null, ?array $attrs = null): string
     {
-        $withGroup = $this->splitGroup;
-
         if ($selected) {
             $this->validateTimezone($selected);
         }
 
-        $attributes = '';
-        if (!empty($attrs)) {
-            foreach ($attrs as $attr_name => $attr_value) {
-                $attributes .= ' '.$attr_name.'="'.$attr_value.'"';
-            }
-        }
+        $attributes = $this->buildAttributes($attrs);
+        $options = $this->buildOptions($selected);
 
-        $output = '<select name="'.$name.'"'.$attributes.'>';
-
-        $options = [];
-
-        if ($this->includeGeneral()) {
-            if ($withGroup) {
-                $options[] = '<optgroup label="General">';
-            }
-
-            $timezone = 'UTC';
-            $options[] = $this->makeOptionTag(
-                $this->formatTimezone($timezone),
-                $timezone,
-                ($selected === $timezone),
-            );
-
-            if ($withGroup) {
-                $options[] = '</optgroup>';
-            }
-        }
-
-        foreach ($this->loadContinents() as $continent => $mask) {
-            $timezones = \DateTimeZone::listIdentifiers($mask);
-
-            if ($withGroup) {
-                $options[] = '<optgroup label="'.$continent.'">';
-            }
-
-            foreach ($timezones as $timezone) {
-                $continent = is_int($continent) ? null : $continent;
-                $cutOffContinent = $withGroup ? $continent : null;
-
-                $options[] = $this->makeOptionTag(
-                    $this->formatTimezone($timezone, $cutOffContinent),
-                    $timezone,
-                    ($selected === $timezone),
-                );
-            }
-
-            if ($withGroup) {
-                $options[] = '</optgroup>';
-            }
-        }
-
-        // Join the options array into a single string
-        $output .= implode('', $options);
-        $output .= '</select>';
-
-        return $output;
+        return '<select name="'.$name.'" '.$attributes.'>'.implode('', $options).'</select>';
     }
 
     /**
@@ -127,35 +73,27 @@ class Timezonelist
     {
         $list = [];
 
-        // If not splitting time zones by continental group
-        if (!$this->splitGroup) {
+        if ($this->splitGroup) {
             if ($this->includeGeneral()) {
-                $timezone = 'UTC';
-                $list[$timezone] = $this->formatTimezone($timezone);
+                $list[self::GROUP_GENERAL]['UTC'] = $this->formatTimezone('UTC');
             }
 
             foreach ($this->loadContinents() as $continent => $mask) {
                 $timezones = \DateTimeZone::listIdentifiers($mask);
+                foreach ($timezones as $timezone) {
+                    $list[$continent][$timezone] = $this->formatTimezone($timezone, $continent);
+                }
+            }
+        } else {
+            if ($this->includeGeneral()) {
+                $list['UTC'] = $this->formatTimezone('UTC');
+            }
 
+            foreach ($this->loadContinents() as $continent => $mask) {
+                $timezones = \DateTimeZone::listIdentifiers($mask);
                 foreach ($timezones as $timezone) {
                     $list[$timezone] = $this->formatTimezone($timezone);
                 }
-            }
-
-            return $list;
-        }
-
-        // If splitting time zones by continental group
-        if ($this->includeGeneral()) {
-            $timezone = 'UTC';
-            $list[self::GROUP_GENERAL][$timezone] = $this->formatTimezone($timezone);
-        }
-
-        foreach ($this->loadContinents() as $continent => $mask) {
-            $timezones = \DateTimeZone::listIdentifiers($mask);
-
-            foreach ($timezones as $timezone) {
-                $list[$continent][$timezone] = $this->formatTimezone($timezone, $continent);
             }
         }
 
@@ -219,18 +157,53 @@ class Timezonelist
         return $this;
     }
 
+    protected function buildAttributes(?array $attrs): string
+    {
+        if (empty($attrs)) {
+            return '';
+        }
+
+        return implode(' ', array_map(function ($key, $value) {
+            return $key.'="'.$value.'"';
+        }, array_keys($attrs), $attrs));
+    }
+
+    protected function buildOptions(?string $selected): array
+    {
+        $options = [];
+
+        if ($this->includeGeneral()) {
+            $options[] = $this->splitGroup ? '<optgroup label="General">' : '';
+            $options[] = $this->makeOptionTag('UTC', $selected);
+            $options[] = $this->splitGroup ? '</optgroup>' : '';
+        }
+
+        foreach ($this->loadContinents() as $continent => $mask) {
+            $timezones = \DateTimeZone::listIdentifiers($mask);
+            $options[] = $this->splitGroup ? '<optgroup label="'.$continent.'">' : '';
+            foreach ($timezones as $timezone) {
+                $continent = $this->splitGroup ? $continent : null;
+                $options[] = $this->makeOptionTag($timezone, $selected, $continent);
+            }
+            $options[] = $this->splitGroup ? '</optgroup>' : '';
+        }
+
+        return $options;
+    }
+
     /**
      * Generate HTML <option> tag
      *
-     * @param string $display The text to display for the option
-     * @param string $value The value of the option.
-     * @param bool $selected Whether the option should be selected
+     * @param string $timezone The timezone name
+     * @param string|null $selected he value of the option to be pre-selected
+     * @param string|null $cutOffContinent The continent name that has been truncated for display
      */
-    protected function makeOptionTag(string $display, string $value, bool $selected): string
+    protected function makeOptionTag(string $timezone, ?string $selected, ?string $cutOffContinent = null): string
     {
-        $attrs = $selected ? ' selected="selected"' : '';
+        $attrs = ($selected === $timezone) ? ' selected="selected"' : '';
+        $display = $this->formatTimezone($timezone, $cutOffContinent);
 
-        return "<option value=\"{$value}\"{$attrs}>{$display}</option>";
+        return "<option value=\"{$timezone}\"{$attrs}>{$display}</option>";
     }
 
     /**
@@ -244,6 +217,8 @@ class Timezonelist
 
     /**
      * Loads the filtered list of continents based on the current group filter.
+     *
+     * @return array<string, int>
      */
     protected function loadContinents(): array
     {
@@ -329,7 +304,7 @@ class Timezonelist
         if (!in_array($timezone, \DateTimeZone::listIdentifiers())) {
             throw new \InvalidArgumentException('Invalid timezone: '.$timezone);
         }
-        // Check if a filter is applied and if the timezone is within the filter
+
         if (!empty($this->groups)) {
             $timezoneContinent = explode('/', $timezone)[0];
             if (!in_array($timezoneContinent, $this->groups) && $timezone !== 'UTC') {
