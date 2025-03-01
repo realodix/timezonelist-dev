@@ -235,11 +235,11 @@ class Timezonelist
      * Formats a timezone name for display, optionally including the continent name and offset.
      *
      * @param string $timezone The timezone name to format
-     * @param string|null $cutOffContinent The continent name to remove from the timezone name (if applicable)
+     * @param string|null $continent The continent name to remove from the timezone name (if applicable)
      */
-    protected function formatTimezone(string $timezone, ?string $cutOffContinent = null): string
+    protected function formatTimezone(string $timezone, ?string $continent = null): string
     {
-        $displayedTz = empty($cutOffContinent) ? $timezone : substr($timezone, strlen($cutOffContinent) + 1);
+        $displayedTz = empty($continent) ? $timezone : substr($timezone, strlen($continent) + 1);
         $normalizedTz = $this->normalizeTimezone($displayedTz);
 
         if (!$this->showOffset) {
