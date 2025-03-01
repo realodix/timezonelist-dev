@@ -100,8 +100,8 @@ class Timezonelist
             }
 
             foreach ($this->loadContinents() as $continent => $mask) {
-                $timezones = \DateTimeZone::listIdentifiers($mask);
-                foreach ($timezones as $timezone) {
+                $tzIdentifiers = \DateTimeZone::listIdentifiers($mask);
+                foreach ($tzIdentifiers as $timezone) {
                     $list[$continent][$timezone] = $this->formatTimezone($timezone, $continent);
                 }
             }
@@ -111,8 +111,8 @@ class Timezonelist
             }
 
             foreach ($this->loadContinents() as $continent => $mask) {
-                $timezones = \DateTimeZone::listIdentifiers($mask);
-                foreach ($timezones as $timezone) {
+                $tzIdentifiers = \DateTimeZone::listIdentifiers($mask);
+                foreach ($tzIdentifiers as $timezone) {
                     $list[$timezone] = $this->formatTimezone($timezone);
                 }
             }
