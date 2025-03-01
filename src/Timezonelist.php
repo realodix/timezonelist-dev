@@ -151,13 +151,8 @@ class Timezonelist
     public function excludeGroups(array $groups)
     {
         $groups = $this->processGroupName($groups);
-        // $this->groups = array_values(array_diff(array_keys(self::CONTINENTS), $groups));
         $this->groups = Collection::make(self::CONTINENTS)
-            ->keys()
-            ->diff($groups)
-            ->values()
-            ->all();
-        // $this->groups = array_keys(array_diff_key(self::CONTINENTS, array_flip($groups)));
+            ->except($groups)->keys()->all();
 
         if (!in_array(self::GROUP_GENERAL, $groups)) {
             $this->groups[] = self::GROUP_GENERAL;
