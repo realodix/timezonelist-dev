@@ -29,12 +29,11 @@ class ToArrayTest extends TestCase
         foreach ($result as $timezone => $formattedTimezone) {
             $this->assertIsString($timezone);
             $this->assertIsString($formattedTimezone);
-            $this->assertStringContainsString('(UTC', $formattedTimezone); // Check for offset
+            $this->assertStringContainsString('(UTC', $formattedTimezone);
         }
 
-        // Example assertion (you'll likely want to adapt this based on expected timezones)
-        $this->assertArrayHasKey('Asia/Jakarta', $result);
-        $this->assertArrayHasKey('Europe/London', $result);
+        $this->assertArrayHasKey('America/New_York', $result);
+        $this->assertArrayNotHasKey('America', $result);
     }
 
     #[PHPUnit\Test]
@@ -53,13 +52,12 @@ class ToArrayTest extends TestCase
             foreach ($timezones as $timezone => $formattedTimezone) {
                 $this->assertIsString($timezone);
                 $this->assertIsString($formattedTimezone);
-                $this->assertStringContainsString('UTC', $formattedTimezone); // Check for offset
+                $this->assertStringContainsString('UTC', $formattedTimezone);
             }
         }
 
-        $this->assertArrayHasKey('Asia', $result);
-        $this->assertArrayHasKey('Europe', $result);
         $this->assertArrayHasKey('America', $result);
+        $this->assertArrayNotHasKey('America/New_York', $result);
     }
 
     #[PHPUnit\Test]
@@ -76,7 +74,7 @@ class ToArrayTest extends TestCase
         foreach ($result as $timezone => $formattedTimezone) {
             $this->assertIsString($timezone);
             $this->assertIsString($formattedTimezone);
-            $this->assertStringContainsString('UTC', $formattedTimezone); // Check for offset
+            $this->assertStringContainsString('UTC', $formattedTimezone);
         }
 
         // Assert that only timezones from Asia and Europe are present. This is tricky without
@@ -94,6 +92,8 @@ class ToArrayTest extends TestCase
         }
         $this->assertGreaterThan(0, $asiaCount, 'No Asia timezones found');
         $this->assertGreaterThan(0, $europeCount, 'No Europe timezones found');
+        $this->assertArrayNotHasKey('America/New_York', $result);
+        $this->assertArrayNotHasKey('America', $result);
     }
 
     #[PHPUnit\Test]
@@ -108,12 +108,13 @@ class ToArrayTest extends TestCase
 
         $this->assertArrayHasKey('Asia', $result);
         $this->assertArrayHasKey('Europe', $result);
-        $this->assertArrayNotHasKey('America', $result); // Should be filtered out
+        $this->assertArrayNotHasKey('America', $result);
+        $this->assertArrayNotHasKey('America/New_York', $result);
 
         foreach ($result['Asia'] as $timezone => $formattedTimezone) {
             $this->assertIsString($timezone);
             $this->assertIsString($formattedTimezone);
-            $this->assertStringContainsString('UTC', $formattedTimezone); // Check for offset
+            $this->assertStringContainsString('UTC', $formattedTimezone);
         }
     }
 
