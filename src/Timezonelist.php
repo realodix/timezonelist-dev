@@ -96,24 +96,24 @@ class Timezonelist
 
         if ($this->splitGroup) {
             if ($this->hasGeneralGroup()) {
-                $list[self::GROUP_GENERAL]['UTC'] = $this->formatTimezone('UTC');
+                $list[self::GROUP_GENERAL]['UTC'] = $this->formatTimezone('UTC', htmlEncode: false);
             }
 
             foreach ($this->loadContinents() as $continent => $mask) {
                 $tzIdentifiers = \DateTimeZone::listIdentifiers($mask);
                 foreach ($tzIdentifiers as $timezone) {
-                    $list[$continent][$timezone] = $this->formatTimezone($timezone, $continent);
+                    $list[$continent][$timezone] = $this->formatTimezone($timezone, $continent, false);
                 }
             }
         } else {
             if ($this->hasGeneralGroup()) {
-                $list['UTC'] = $this->formatTimezone('UTC');
+                $list['UTC'] = $this->formatTimezone('UTC', htmlEncode: false);
             }
 
             foreach ($this->loadContinents() as $continent => $mask) {
                 $tzIdentifiers = \DateTimeZone::listIdentifiers($mask);
                 foreach ($tzIdentifiers as $timezone) {
-                    $list[$timezone] = $this->formatTimezone($timezone);
+                    $list[$timezone] = $this->formatTimezone($timezone, htmlEncode: false);
                 }
             }
         }
@@ -223,8 +223,9 @@ class Timezonelist
      *
      * @param string $timezone The timezone name to format
      * @param string|null $continent The continent name to remove from the timezone name (if applicable)
+     * @param bool $htmlEncode Whether to HTML-encode the output
      */
-    protected function formatTimezone(string $timezone, ?string $continent = null): string
+    protected function formatTimezone(string $timezone, ?string $continent = null, bool $htmlEncode = true): string
     {
         $displayedTz = empty($continent) ? $timezone : substr($timezone, strlen($continent) + 1);
         $normalizedTz = $this->normalizeTimezone($displayedTz);
@@ -234,7 +235,7 @@ class Timezonelist
         }
 
         $offset = $this->getOffset($timezone);
-        $separator = str_repeat(self::HTML_WHITESPACE, 3);
+        $separator = $htmlEncode ? str_repeat(self::HTML_WHITESPACE, 3) : ' ';
 
         return "(UTC{$offset})".$separator.$normalizedTz;
     }
