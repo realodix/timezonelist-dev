@@ -94,35 +94,27 @@ class Timezonelist
     {
         $list = [];
 
-        // If not splitting time zones by continental group
-        if (!$this->splitGroup) {
+        if ($this->splitGroup) {
             if ($this->hasGeneralGroup()) {
-                $timezone = 'UTC';
-                $list[$timezone] = $this->formatTimezone($timezone);
+                $list[self::GROUP_GENERAL]['UTC'] = $this->formatTimezone('UTC');
             }
 
             foreach ($this->loadContinents() as $continent => $mask) {
                 $timezones = \DateTimeZone::listIdentifiers($mask);
+                foreach ($timezones as $timezone) {
+                    $list[$continent][$timezone] = $this->formatTimezone($timezone, $continent);
+                }
+            }
+        } else {
+            if ($this->hasGeneralGroup()) {
+                $list['UTC'] = $this->formatTimezone('UTC');
+            }
 
+            foreach ($this->loadContinents() as $continent => $mask) {
+                $timezones = \DateTimeZone::listIdentifiers($mask);
                 foreach ($timezones as $timezone) {
                     $list[$timezone] = $this->formatTimezone($timezone);
                 }
-            }
-
-            return $list;
-        }
-
-        // If splitting time zones by continental group
-        if ($this->hasGeneralGroup()) {
-            $timezone = 'UTC';
-            $list[self::GROUP_GENERAL][$timezone] = $this->formatTimezone($timezone);
-        }
-
-        foreach ($this->loadContinents() as $continent => $mask) {
-            $timezones = \DateTimeZone::listIdentifiers($mask);
-
-            foreach ($timezones as $timezone) {
-                $list[$continent][$timezone] = $this->formatTimezone($timezone, $continent);
             }
         }
 
