@@ -20,7 +20,7 @@ class ExceptionTest extends TestCase
      */
     public function testToSelectBoxThrowsExceptionForInvalidTimezone(): void
     {
-        $this->expectException(\InvalidArgumentException::class);
+        $this->expectException(\DateInvalidTimeZoneException::class);
         $this->expectExceptionMessage('Invalid timezone: New_York');
 
         $this->tz->toSelectBox('timezone_default', 'New_York');

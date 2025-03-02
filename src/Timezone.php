@@ -2,7 +2,7 @@
 
 namespace Realodix\Timezone;
 
-use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 
 class Timezone
 {
@@ -29,11 +29,11 @@ class Timezone
 
     /**
      * List of groups to include/exclude in the timezone list. An empty array
-     * indicates all groups.
+     * indicates all groups should be included.
      *
      * @var list<string>
      */
-    protected array $selectedGroups = [];
+    protected array $activeGroups = [];
 
     /**
      * Whether to group timezones by continent
@@ -58,7 +58,7 @@ class Timezone
             $this->validateTimezone($selected);
         }
 
-        $attributes = Collection::make($attrs)
+        $attributes = collect($attrs)
             ->map(fn($value, $key) => "{$key}=\"{$value}\"")
             ->implode(' ');
 
@@ -70,11 +70,11 @@ class Timezone
         }
 
         foreach ($this->loadContinents() as $continent => $mask) {
-            $timezones = \DateTimeZone::listIdentifiers($mask);
+            $timezoneIds = \DateTimeZone::listIdentifiers($mask);
             $options[] = $this->splitGroup ? '<optgroup label="'.$continent.'">' : '';
-            foreach ($timezones as $timezone) {
+            foreach ($timezoneIds as $timezoneId) {
                 $continent = $this->splitGroup ? $continent : null;
-                $options[] = $this->makeOptionTag($timezone, $selected, $continent);
+                $options[] = $this->makeOptionTag($timezoneId, $selected, $continent);
             }
             $options[] = $this->splitGroup ? '</optgroup>' : '';
         }
@@ -99,9 +99,9 @@ class Timezone
             }
 
             foreach ($this->loadContinents() as $continent => $mask) {
-                $tzIdentifiers = \DateTimeZone::listIdentifiers($mask);
-                foreach ($tzIdentifiers as $timezone) {
-                    $list[$continent][$timezone] = $this->formatTimezone($timezone, $continent, false);
+                $timezoneIds = \DateTimeZone::listIdentifiers($mask);
+                foreach ($timezoneIds as $timezoneId) {
+                    $list[$continent][$timezoneId] = $this->formatTimezone($timezoneId, $continent, false);
                 }
             }
         } else {
@@ -110,9 +110,9 @@ class Timezone
             }
 
             foreach ($this->loadContinents() as $continent => $mask) {
-                $tzIdentifiers = \DateTimeZone::listIdentifiers($mask);
-                foreach ($tzIdentifiers as $timezone) {
-                    $list[$timezone] = $this->formatTimezone($timezone, htmlEncode: false);
+                $timezoneIds = \DateTimeZone::listIdentifiers($mask);
+                foreach ($timezoneIds as $timezoneId) {
+                    $list[$timezoneId] = $this->formatTimezone($timezoneId, htmlEncode: false);
                 }
             }
         }
@@ -128,8 +128,9 @@ class Timezone
      */
     public function onlyGroups(array $groups)
     {
+        $groups = array_map(fn($group) => Str::title($group), $groups);
         $this->validateGroups($groups);
-        $this->selectedGroups = $groups;
+        $this->activeGroups = $groups;
 
         return $this;
     }
@@ -142,9 +143,10 @@ class Timezone
      */
     public function excludeGroups(array $groups)
     {
+        $groups = array_map(fn($group) => Str::title($group), $groups);
         $this->validateGroups($groups);
 
-        $this->selectedGroups = Collection::make(self::CONTINENTS)
+        $this->activeGroups = collect(self::CONTINENTS)
             ->except($groups)->keys()
             ->when(!in_array(self::GROUP_GENERAL, $groups), function ($collection) {
                 $collection->push(self::GROUP_GENERAL);
@@ -185,16 +187,16 @@ class Timezone
     /**
      * Generate HTML <option> tag
      *
-     * @param string $timezone The timezone name
-     * @param string|null $selected he value of the option to be pre-selected
+     * @param string $timezoneId Timezone identifier (e.g. "America/New_York")
+     * @param string|null $selected The value of the option to be pre-selected
      * @param string|null $continent The continent name
      */
-    protected function makeOptionTag(string $timezone, ?string $selected, ?string $continent = null): string
+    protected function makeOptionTag(string $timezoneId, ?string $selected, ?string $continent = null): string
     {
-        $attrs = ($selected === $timezone) ? ' selected="selected"' : '';
-        $display = $this->formatTimezone($timezone, $continent);
+        $attrs = ($selected === $timezoneId) ? ' selected' : '';
+        $display = $this->formatTimezone($timezoneId, $continent);
 
-        return "<option value=\"{$timezone}\"{$attrs}>{$display}</option>";
+        return "<option value=\"{$timezoneId}\"{$attrs}>{$display}</option>";
     }
 
     /**
@@ -202,7 +204,7 @@ class Timezone
      */
     protected function hasGeneralGroup(): bool
     {
-        return empty($this->selectedGroups) || in_array(self::GROUP_GENERAL, $this->selectedGroups);
+        return empty($this->activeGroups) || in_array(self::GROUP_GENERAL, $this->activeGroups);
     }
 
     /**
@@ -212,12 +214,12 @@ class Timezone
      */
     protected function loadContinents(): array
     {
-        if (empty($this->selectedGroups)) {
+        if (empty($this->activeGroups)) {
             return self::CONTINENTS;
         }
 
-        return Collection::make(self::CONTINENTS)
-            ->only($this->selectedGroups)
+        return collect(self::CONTINENTS)
+            ->only($this->activeGroups)
             ->all();
     }
 
@@ -225,36 +227,24 @@ class Timezone
      * Formats a timezone name for display, optionally including the continent name
      * and offset.
      *
-     * @param string $timezone The timezone name to format
+     * @param string $timezoneId Timezone identifier (e.g. "America/New_York")
      * @param string|null $continent The continent name to remove from
      *                               the timezone name (if applicable)
      * @param bool $htmlEncode Whether to HTML-encode the output
      */
-    protected function formatTimezone(string $timezone, ?string $continent = null, bool $htmlEncode = true): string
+    protected function formatTimezone(string $timezoneId, ?string $continent = null, bool $htmlEncode = true): string
     {
-        $displayedTz = empty($continent) ? $timezone : substr($timezone, strlen($continent) + 1);
+        $displayedTz = empty($continent) ? $timezoneId : substr($timezoneId, strlen($continent) + 1);
         $normalizedTz = str_replace(['St_', '/', '_'], ['St. ', ' / ', ' '], $displayedTz);
 
         if (!$this->showOffset) {
             return $normalizedTz;
         }
 
-        $offset = $this->getOffset($timezone);
+        $offset = (new \DateTime('', new \DateTimeZone($timezoneId)))->format('P');
         $separator = $htmlEncode ? str_repeat(self::HTML_WHITESPACE, 3) : ' ';
 
         return "(UTC{$offset})".$separator.$normalizedTz;
-    }
-
-    /**
-     * Get the timezone offset in ISO 8601 format (e.g., "+00:00")
-     *
-     * @param string $timezone The timezone name
-     */
-    protected function getOffset(string $timezone): string
-    {
-        $time = new \DateTime('', new \DateTimeZone($timezone));
-
-        return $time->format('P');
     }
 
     /**
@@ -267,7 +257,6 @@ class Timezone
      */
     protected function validateGroups(array $groups)
     {
-        $groups = array_map(fn($group) => ucfirst(strtolower($group)), $groups);
         $validGroups = array_merge(array_keys(self::CONTINENTS), [self::GROUP_GENERAL]);
         $invalidGroups = array_diff($groups, $validGroups);
 
@@ -279,26 +268,26 @@ class Timezone
     /**
      * Validate a timezone name and check if it is within the specified groups
      *
-     * @param string $timezone The timezone name to validate
+     * @param string $timezoneId Timezone identifier (e.g. "America/New_York")
      * @return void
      *
-     * @throws \InvalidArgumentException When the timezone is invalid
+     * @throws \DateInvalidTimeZoneException When the timezone is invalid
      * @throws \InvalidArgumentException When the timezone is not within the specified groups
      */
-    protected function validateTimezone(string $timezone)
+    protected function validateTimezone(string $timezoneId)
     {
-        if (!in_array($timezone, \DateTimeZone::listIdentifiers())) {
-            throw new \InvalidArgumentException('Invalid timezone: '.$timezone);
+        if (!in_array($timezoneId, \DateTimeZone::listIdentifiers())) {
+            throw new \DateInvalidTimeZoneException('Invalid timezone: '.$timezoneId);
         }
         // Check if a filter is applied and if the timezone is within the filter
-        if (!empty($this->selectedGroups)) {
-            $timezoneContinent = explode('/', $timezone)[0];
-            if (!in_array($timezoneContinent, $this->selectedGroups) && $timezone !== 'UTC') {
-                asort($this->selectedGroups);
+        if (!empty($this->activeGroups)) {
+            $continent = explode('/', $timezoneId)[0];
+            if (!in_array($continent, $this->activeGroups) && $timezoneId !== 'UTC') {
+                asort($this->activeGroups);
                 throw new \InvalidArgumentException(sprintf(
                     'Timezone %s is not within the specified groups: %s',
-                    $timezone,
-                    implode(', ', $this->selectedGroups),
+                    $timezoneId,
+                    implode(', ', $this->activeGroups),
                 ));
             }
         }

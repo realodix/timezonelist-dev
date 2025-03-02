@@ -39,7 +39,7 @@ public function toSelectBox(string $name, ?string $selected = null, ?array $attr
 ```php
 use Realodix\Timezone\Timezone;
 
-$tz = new Timezone();
+$tz = new Timezone;
 $attributes = ['class' => 'form-control', 'id' => 'timezone-select'];
 
 $tz->toSelectBox('timezone', 'America/New_York', $attributes);
@@ -55,7 +55,7 @@ Output:
     <optgroup label="America">
         ...
         <option value="America/Nassau">(UTC-05:00) Nassau</option>
-        <option value="America/New_York" selected="selected">(UTC-05:00) New York</option>
+        <option value="America/New_York" selected>(UTC-05:00) New York</option>
         <option value="America/Nome">(UTC-09:00) Nome</option>
         ...
     </optgroup>
@@ -86,7 +86,7 @@ public function toArray(): array
 ```php
 use Realodix\Timezone\Timezone;
 
-$tz = new Timezone();
+$tz = new Timezone;
 
 $tz->toArray();
 ```

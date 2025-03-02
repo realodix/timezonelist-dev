@@ -54,7 +54,7 @@ class TimezoneTest extends TestCase
     {
         $selectedTimezone = 'America/New_York';
         $output = $this->tz->toSelectBox('timezone_selected', $selectedTimezone);
-        $this->assertStringContainsString('<option value="America/New_York" selected="selected">', $output);
+        $this->assertStringContainsString('<option value="America/New_York" selected>', $output);
     }
 
     public function testAttributes(): void
@@ -181,7 +181,7 @@ class TimezoneTest extends TestCase
     public function normalizeContinentInput()
     {
         $excludeResult = $this->tz
-            ->excludeGroups(['asia', 'europe'])
+            ->excludeGroups(['asIa', 'euRope'])
             ->toArray();
         $this->assertIsArray($excludeResult);
         $this->assertNotEmpty($excludeResult);
@@ -190,7 +190,7 @@ class TimezoneTest extends TestCase
         $this->assertArrayHasKey('America', $excludeResult);
 
         $onlyResult = $this->tz
-            ->onlyGroups(['Asia', 'Europe'])
+            ->onlyGroups(['asIa', 'euRope'])
             ->toArray();
         $this->assertIsArray($onlyResult);
         $this->assertNotEmpty($onlyResult);
