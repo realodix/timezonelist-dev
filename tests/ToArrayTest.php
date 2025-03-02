@@ -1,25 +1,25 @@
 <?php
 
-namespace Tests\Unit;
+namespace Realodix\Timezone\Test;
 
 use PHPUnit\Framework\Attributes as PHPUnit;
 use PHPUnit\Framework\TestCase;
-use Realodix\Timezonelist\Timezonelist;
+use Realodix\Timezone\Timezone;
 
 class ToArrayTest extends TestCase
 {
-    private Timezonelist $tzList;
+    private Timezone $tz;
 
     protected function setUp(): void
     {
-        $this->tzList = new Timezonelist;
+        $this->tz = new Timezone;
     }
 
     #[PHPUnit\Test]
     public function noGroup_noFilter()
     {
-        $result = $this->tzList
-            ->splitGroup(false)
+        $result = $this->tz
+            ->disableGrouping()
             ->toArray();
 
         $this->assertIsArray($result);
@@ -29,106 +29,103 @@ class ToArrayTest extends TestCase
         foreach ($result as $timezone => $formattedTimezone) {
             $this->assertIsString($timezone);
             $this->assertIsString($formattedTimezone);
-            $this->assertStringContainsString('(UTC', $formattedTimezone); // Check for offset
+            $this->assertStringContainsString('(UTC', $formattedTimezone);
         }
 
-        // Example assertion (you'll likely want to adapt this based on expected timezones)
-        $this->assertArrayHasKey('Asia/Jakarta', $result);
-        $this->assertArrayHasKey('Europe/London', $result);
+        $this->assertArrayHasKey('America/New_York', $result);
+        $this->assertArrayNotHasKey('America', $result);
     }
 
     #[PHPUnit\Test]
     public function withGroup_noFilter()
     {
-        $result = $this->tzList->toArray(); // Default: splitGroup = true
+        $result = $this->tz->toArray();
 
         $this->assertIsArray($result);
-        $this->assertNotEmpty($result);
+        $this->assertSame(
+            $this->withGroup_noFilter_baseline(),
+            collect($result)->map(fn($item) => array_slice($item, 0, 1))->toArray(),
+        );
+    }
 
-        // Check if the top-level keys are continent names
-        foreach ($result as $continent => $timezones) {
-            $this->assertIsString($continent);
-            $this->assertIsArray($timezones);
-
-            foreach ($timezones as $timezone => $formattedTimezone) {
-                $this->assertIsString($timezone);
-                $this->assertIsString($formattedTimezone);
-                $this->assertStringContainsString('UTC', $formattedTimezone); // Check for offset
-            }
-        }
-
-        $this->assertArrayHasKey('Asia', $result);
-        $this->assertArrayHasKey('Europe', $result);
-        $this->assertArrayHasKey('America', $result);
+    protected function withGroup_noFilter_baseline(): array
+    {
+        return [
+            'General'    => ['UTC' => '(UTC+00:00) UTC'],
+            'Africa'     => ['Africa/Abidjan' => '(UTC+00:00) Abidjan'],
+            'America'    => ['America/Adak' => '(UTC-10:00) Adak'],
+            'Antarctica' => ['Antarctica/Casey' => '(UTC+08:00) Casey'],
+            'Arctic'     => ['Arctic/Longyearbyen' => '(UTC+01:00) Longyearbyen'],
+            'Asia'       => ['Asia/Aden' => '(UTC+03:00) Aden'],
+            'Atlantic'   => ['Atlantic/Azores' => '(UTC-01:00) Azores'],
+            'Australia'  => ['Australia/Adelaide' => '(UTC+10:30) Adelaide'],
+            'Europe'     => ['Europe/Amsterdam' => '(UTC+01:00) Amsterdam'],
+            'Indian'     => ['Indian/Antananarivo' => '(UTC+03:00) Antananarivo'],
+            'Pacific'    => ['Pacific/Apia' => '(UTC+13:00) Apia'],
+        ];
     }
 
     #[PHPUnit\Test]
     public function noGroup_withFilter()
     {
-        $result = $this->tzList
-            ->splitGroup(false)
-            ->onlyGroups(['Asia', 'Europe'])
+        $result = $this->tz
+            ->disableGrouping()
+            ->onlyGroups(['General', 'Arctic'])
             ->toArray();
 
         $this->assertIsArray($result);
-        $this->assertNotEmpty($result);
-
-        foreach ($result as $timezone => $formattedTimezone) {
-            $this->assertIsString($timezone);
-            $this->assertIsString($formattedTimezone);
-            $this->assertStringContainsString('UTC', $formattedTimezone); // Check for offset
-        }
-
-        // Assert that only timezones from Asia and Europe are present. This is tricky without
-        // knowing *exactly* what timezones are returned a better approach might be to count
-        // the number of returned values for each continent.
-        $asiaCount = 0;
-        $europeCount = 0;
-        foreach (array_keys($result) as $timezone) {
-            if (str_starts_with($timezone, 'Asia/')) {
-                $asiaCount++;
-            }
-            if (str_starts_with($timezone, 'Europe/')) {
-                $europeCount++;
-            }
-        }
-        $this->assertGreaterThan(0, $asiaCount, 'No Asia timezones found');
-        $this->assertGreaterThan(0, $europeCount, 'No Europe timezones found');
+        $this->assertSame(
+            [
+                'UTC' => '(UTC+00:00) UTC',
+                'Arctic/Longyearbyen' => '(UTC+01:00) Arctic / Longyearbyen',
+            ],
+            $result,
+        );
     }
 
     #[PHPUnit\Test]
     public function withGroup_withFilter()
     {
-        $result = $this->tzList
-            ->onlyGroups(['Asia', 'Europe'])
+        $result = $this->tz
+            ->onlyGroups(['General', 'Arctic', 'Atlantic'])
             ->toArray();
 
-        $this->assertIsArray($result);
-        $this->assertNotEmpty($result);
-
-        $this->assertArrayHasKey('Asia', $result);
-        $this->assertArrayHasKey('Europe', $result);
-        $this->assertArrayNotHasKey('America', $result); // Should be filtered out
-
-        foreach ($result['Asia'] as $timezone => $formattedTimezone) {
-            $this->assertIsString($timezone);
-            $this->assertIsString($formattedTimezone);
-            $this->assertStringContainsString('UTC', $formattedTimezone); // Check for offset
-        }
+        $this->assertSame($this->filter_baseline(), $result);
     }
 
     #[PHPUnit\Test]
     public function excludeGroup()
     {
-        $result = $this->tzList
-            ->excludeGroups(['Asia', 'Europe'])
-            ->toArray();
+        $result = $this->tz
+            ->excludeGroups([
+                'Africa', 'America', 'Antarctica', 'Asia', 'Australia',
+                'Europe', 'Indian', 'Pacific',
+            ])->toArray();
 
-        $this->assertIsArray($result);
-        $this->assertNotEmpty($result);
+        $this->assertSame($this->filter_baseline(), $result);
+    }
 
-        $this->assertArrayNotHasKey('Asia', $result);
-        $this->assertArrayNotHasKey('Europe', $result);
-        $this->assertArrayHasKey('America', $result); // Should not be filtered out
+    protected function filter_baseline(): array
+    {
+        return [
+            'General' => [
+                'UTC' => '(UTC+00:00) UTC',
+            ],
+            'Arctic' => [
+                'Arctic/Longyearbyen' => '(UTC+01:00) Longyearbyen',
+            ],
+            'Atlantic' => [
+                'Atlantic/Azores' => '(UTC-01:00) Azores',
+                'Atlantic/Bermuda' => '(UTC-04:00) Bermuda',
+                'Atlantic/Canary' => '(UTC+00:00) Canary',
+                'Atlantic/Cape_Verde' => '(UTC-01:00) Cape Verde',
+                'Atlantic/Faroe' => '(UTC+00:00) Faroe',
+                'Atlantic/Madeira' => '(UTC+00:00) Madeira',
+                'Atlantic/Reykjavik' => '(UTC+00:00) Reykjavik',
+                'Atlantic/South_Georgia' => '(UTC-02:00) South Georgia',
+                'Atlantic/St_Helena' => '(UTC+00:00) St. Helena',
+                'Atlantic/Stanley' => '(UTC-03:00) Stanley',
+            ],
+        ];
     }
 }

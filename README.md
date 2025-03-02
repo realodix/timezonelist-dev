@@ -1,9 +1,9 @@
-# Timezonelist
+# Realodix\Timezone
 
 ![PHPVersion](https://img.shields.io/badge/PHP-8.1-777BB4.svg?style=flat-square)
-[![GitHub license](https://img.shields.io/github/license/realodix/timezonelist?style=flat-square)](https://github.com/realodix/timezonelist/blob/main/LICENSE)
+[![GitHub license](https://img.shields.io/github/license/realodix/timezone?style=flat-square)](https://github.com/realodix/timezone/blob/main/LICENSE)
 
-Timezonelist is a PHP library that provides an easy way to generate HTML select boxes for timezones. It offers features to filter timezones by continent, group them, display offsets, and customize the output.
+A PHP library that provides an easy way to generate HTML select boxes for timezones. It offers features to filter timezones by continent, group them, display offsets, and customize the output.
 
 ## Features
 - Generate a list of all available timezones.
@@ -18,8 +18,15 @@ Timezonelist is a PHP library that provides an easy way to generate HTML select 
 You can install this package via Composer:
 
 ```bash
-composer require realodix/timezonelist
+composer require realodix/timezone
 ```
+
+### Project status & release process
+While this library is still under development, it is well tested and should be stable enough to use in production environments.
+
+The current releases are numbered `0.x.y`. When a non-breaking change is introduced (adding new methods, optimizing existing code, etc.), `y` is incremented.
+
+**When a breaking change is introduced, a new `0.x` version cycle is always started.** It is therefore safe to lock your project to a given release cycle, such as `0.1.*`. If you need to upgrade to a newer release cycle, check the [release history](/releases) for a list of changes introduced by each further `0.x.0` version.
 
 ## Usage
 
@@ -37,12 +44,12 @@ public function toSelectBox(string $name, ?string $selected = null, ?array $attr
 ```
 
 ```php
-use Realodix\Timezonelist\Timezonelist;
+use Realodix\Timezone\Timezone;
 
-$tzList = new Timezonelist();
+$tz = new Timezone;
 $attributes = ['class' => 'form-control', 'id' => 'timezone-select'];
 
-$tzList->toSelectBox('timezone', 'America/New_York', $attributes);
+$tz->toSelectBox('timezone', 'America/New_York', $attributes);
 ```
 
 Output:
@@ -55,7 +62,7 @@ Output:
     <optgroup label="America">
         ...
         <option value="America/Nassau">(UTC-05:00) Nassau</option>
-        <option value="America/New_York" selected="selected">(UTC-05:00) New York</option>
+        <option value="America/New_York" selected>(UTC-05:00) New York</option>
         <option value="America/Nome">(UTC-09:00) Nome</option>
         ...
     </optgroup>
@@ -73,22 +80,11 @@ Output:
 ### Create timezone list array
 
 ```php
-/**
- * Generates an array of timezones, with optional grouping by continent
- *
- * If $this->splitGroup is true, the array will be a multidimensional array with
- * the first key being the continent. Otherwise, the array will be a flat array
- * of timezones.
- */
-public function toArray(): array
-```
+use Realodix\Timezone\Timezone;
 
-```php
-use Realodix\Timezonelist\Timezonelist;
+$tz = new Timezone;
 
-$tzList = new Timezonelist();
-
-$tzList->toArray();
+$tz->toArray();
 ```
 
 Output:
@@ -106,12 +102,25 @@ Output:
 ```
 
 ### Filtering and Grouping Timezones
-Timezonelist provides several methods to customize the timezone list:
+Realodix\Timezone provides several methods to customize the timezone list:
 
-- `onlyGroups(array $groups)`: Includes only the specified continent/group names. For example, `$tzList->onlyGroups(['America', 'Europe'])` will only return timezones within the America and Europe continents.
-- `excludeGroups(array $groups)`: Excludes the specified continent/group names. For example, `$tzList->excludeGroups(['Africa'])` will exclude all timezones from Africa.
-- `splitGroup(bool $value)`: Determines whether the timezone list is grouped by continent.
-- `showOffset(bool $value)`: Determines whether the timezone offset (e.g., UTC-05:00) is displayed.
+- `onlyGroups(array $groups)`: Includes only the specified continent/group names. For example, `$tz->onlyGroups(['America', 'Europe'])` will only return timezones within the America and Europe continents.
+- `excludeGroups(array $groups)`: Excludes the specified continent/group names. For example, `$tz->excludeGroups(['Arctic'])` will exclude all timezones from Africa.
+- `disableGrouping()`: Flattens the timezone list, removing the continental grouping.
+- `omitOffset()`: Removes the UTC offset from the displayed timezone names.
+
+#### Timezones groups
+- General
+- Africa
+- America
+- Antarctica
+- Arctic
+- Asia
+- Atlantic
+- Australia
+- Europe
+- Indian
+- Pacific
 
 ## License
 This package is licensed using the [MIT License](/LICENSE).

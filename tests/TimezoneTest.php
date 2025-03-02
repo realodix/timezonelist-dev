@@ -1,24 +1,24 @@
 <?php
 
-namespace Tests\Unit;
+namespace Realodix\Timezone\Test;
 
 use PHPUnit\Framework\Attributes as PHPUnit;
 use PHPUnit\Framework\TestCase;
-use Realodix\Timezonelist\Timezonelist;
+use Realodix\Timezone\Timezone;
 
-class TimezonelistTest extends TestCase
+class TimezoneTest extends TestCase
 {
-    protected Timezonelist $tzList;
+    protected Timezone $tz;
 
     protected function setUp(): void
     {
-        $this->tzList = new Timezonelist;
+        $this->tz = new Timezone;
     }
 
     #[PHPUnit\Test]
     public function toSelectBox(): void
     {
-        $output = $this->tzList->toSelectBox('timezone_default');
+        $output = $this->tz->toSelectBox('timezone_default');
         $this->assertStringStartsWith('<select name="timezone_default"', $output);
         $this->assertStringContainsString('<optgroup label="General">', $output);
         $this->assertStringContainsString('<option value="UTC">(UTC+00:00)&nbsp;&nbsp;&nbsp;UTC</option>', $output);
@@ -53,20 +53,20 @@ class TimezonelistTest extends TestCase
     public function testSelectedValue(): void
     {
         $selectedTimezone = 'America/New_York';
-        $output = $this->tzList->toSelectBox('timezone_selected', $selectedTimezone);
-        $this->assertStringContainsString('<option value="America/New_York" selected="selected">', $output);
+        $output = $this->tz->toSelectBox('timezone_selected', $selectedTimezone);
+        $this->assertStringContainsString('<option value="America/New_York" selected>', $output);
     }
 
     public function testAttributes(): void
     {
         $attrsArray = ['class' => 'form-control', 'id' => 'timezone-select'];
-        $outputArray = $this->tzList->toSelectBox('timezone_attrs_array', attrs: $attrsArray);
+        $outputArray = $this->tz->onlyGroups(['Arctic'])->toSelectBox('timezone_attrs_array', attrs: $attrsArray);
         $this->assertStringContainsString('<select name="timezone_attrs_array" class="form-control" id="timezone-select">', $outputArray);
     }
 
     public function testToSelectBox_WithGroup_WithOffset(): void
     {
-        $output = $this->tzList->splitGroup()->showOffset()->toSelectBox('timezone_with_group_offset');
+        $output = $this->tz->toSelectBox('timezone_with_group_offset');
         $this->assertStringStartsWith('<select name="timezone_with_group_offset"', $output);
         $this->assertStringContainsString('<optgroup label="Africa">', $output);
         $this->assertStringContainsString('<option value="Africa/Abidjan">(UTC', $output);
@@ -80,7 +80,7 @@ class TimezonelistTest extends TestCase
 
     public function testToSelectBox_WithoutGroup_WithOffset(): void
     {
-        $output = $this->tzList->splitGroup(false)->showOffset()->toSelectBox('timezone_without_group_offset');
+        $output = $this->tz->disableGrouping()->toSelectBox('timezone_without_group_offset');
         $this->assertStringStartsWith('<select name="timezone_without_group_offset"', $output);
         $this->assertStringNotContainsString('<optgroup label="Africa">', $output);
         $this->assertStringContainsString('<option value="Africa/Abidjan">(UTC', $output);
@@ -94,7 +94,7 @@ class TimezonelistTest extends TestCase
 
     public function testToSelectBox_WithGroup_WithoutOffset(): void
     {
-        $output = $this->tzList->splitGroup()->showOffset(false)->toSelectBox('timezone_with_group_no_offset');
+        $output = $this->tz->omitOffset()->toSelectBox('timezone_with_group_no_offset');
         $this->assertStringStartsWith('<select name="timezone_with_group_no_offset"', $output);
         $this->assertStringContainsString('<optgroup label="Africa">', $output);
         $this->assertStringNotContainsString('(UTC', $output);
@@ -104,7 +104,7 @@ class TimezonelistTest extends TestCase
 
     public function testToSelectBox_WithoutGroup_WithoutOffset(): void
     {
-        $output = $this->tzList->splitGroup(false)->showOffset(false)->toSelectBox('timezone_no_group_no_offset');
+        $output = $this->tz->disableGrouping()->omitOffset()->toSelectBox('timezone_no_group_no_offset');
         $this->assertStringStartsWith('<select name="timezone_no_group_no_offset"', $output);
         $this->assertStringNotContainsString('<optgroup label="Africa">', $output);
         $this->assertStringNotContainsString('(UTC', $output);
@@ -114,59 +114,53 @@ class TimezonelistTest extends TestCase
 
     public function testOnlyGroups(): void
     {
-        $service = $this->tzList->onlyGroups(['Africa', 'America']);
-        $this->assertInstanceOf(Timezonelist::class, $service);
-
-        $output = $this->tzList->onlyGroups(['Africa'])->toSelectBox('timezone_only_africa');
+        $output = $this->tz->onlyGroups(['Africa'])->toSelectBox('timezone_only_africa');
         $this->assertStringContainsString('<optgroup label="Africa">', $output);
         $this->assertStringNotContainsString('<optgroup label="America">', $output);
 
-        $output = $this->tzList->onlyGroups(['America'])->toSelectBox('timezone_only_america');
+        $output = $this->tz->onlyGroups(['America'])->toSelectBox('timezone_only_america');
         $this->assertStringNotContainsString('<optgroup label="Africa">', $output);
         $this->assertStringContainsString('<optgroup label="America">', $output);
     }
 
     public function testExcludeGroups(): void
     {
-        $service = $this->tzList->excludeGroups(['Africa']);
-        $this->assertInstanceOf(Timezonelist::class, $service);
+        $excludeGroups = [
+            'Africa', 'America', 'Antarctica', 'Asia', 'Atlantic', 'Australia',
+            'Europe', 'Indian', 'Pacific',
+        ];
 
-        $output = $this->tzList->excludeGroups(['Africa'])->toSelectBox('timezone_exclude_africa');
-        $this->assertStringNotContainsString('<optgroup label="Africa">', $output);
-        $this->assertStringContainsString('<optgroup label="America">', $output);
+        $output = $this->tz->excludeGroups($excludeGroups)->toSelectBox('timezone_exclude');
+        $this->assertStringNotContainsString('<optgroup label="America">', $output);
         $this->assertStringContainsString('<optgroup label="General">', $output);
+        $this->assertStringContainsString('<optgroup label="Arctic">', $output);
 
-        $output = $this->tzList->excludeGroups(['General'])->toSelectBox('timezone_exclude_general');
+        $output = $this->tz->excludeGroups(['General'])->toSelectBox('timezone_exclude_general');
         $this->assertStringNotContainsString('<optgroup label="General">', $output);
         $this->assertStringContainsString('<optgroup label="America">', $output);
     }
 
     public function testSplitGroup(): void
     {
-        $service = $this->tzList->splitGroup(true);
-        $this->assertInstanceOf(Timezonelist::class, $service);
-        $outputWithGroup = $this->tzList->splitGroup(true)->toSelectBox('timezone_split_true');
+        $outputWithGroup = $this->tz->toSelectBox('timezone_split_true');
         $this->assertStringContainsString('<optgroup', $outputWithGroup, 'Asserting optgroup tag exists when splitGroup is true');
 
-        $outputWithoutGroup = $this->tzList->splitGroup(false)->toSelectBox('timezone_split_false');
+        $outputWithoutGroup = $this->tz->disableGrouping()->toSelectBox('timezone_split_false');
         $this->assertStringNotContainsString('<optgroup', $outputWithoutGroup, 'Asserting optgroup tag does not exist when splitGroup is false');
     }
 
     public function testShowOffset(): void
     {
-        $service = $this->tzList->showOffset(true);
-        $this->assertInstanceOf(Timezonelist::class, $service);
-
-        $outputWithOffset = $this->tzList->showOffset(true)->toSelectBox('timezone_offset_true');
+        $outputWithOffset = $this->tz->toSelectBox('timezone_offset_true');
         $this->assertStringContainsString('(UTC', $outputWithOffset, 'Asserting offset prefix exists when showOffset is true');
 
-        $outputWithoutOffset = $this->tzList->showOffset(false)->toSelectBox('timezone_offset_false');
+        $outputWithoutOffset = $this->tz->omitOffset()->toSelectBox('timezone_offset_false');
         $this->assertStringNotContainsString('(UTC', $outputWithoutOffset, 'Asserting offset prefix does not exist when showOffset is false');
     }
 
     public function testNormalizeTimezone(): void
     {
-        $output = $this->tzList->toSelectBox('timezone_default');
+        $output = $this->tz->onlyGroups(['America'])->toSelectBox('timezone_default');
         $this->assertStringContainsString(
             '<option value="America/Argentina/Rio_Gallegos">(UTC-03:00)&nbsp;&nbsp;&nbsp;Argentina / Rio Gallegos</option>',
             $output,
@@ -178,32 +172,10 @@ class TimezonelistTest extends TestCase
     }
 
     #[PHPUnit\Test]
-    public function testToSelectBoxWithInvalidSelectedTimezone(): void
-    {
-        $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('Invalid timezone: New_York');
-
-        $this->tzList->toSelectBox('timezone_default', 'New_York');
-    }
-
-    #[PHPUnit\Test]
-    public function testToSelectBoxWithFilteredTimezone(): void
-    {
-        $this->expectException(\Realodix\Timezonelist\Exceptions\OutOfScopeTimezoneException::class);
-        $this->expectExceptionMessage(
-            'Timezone Australia/Melbourne is not within the specified groups: America, Asia',
-        );
-
-        $this->tzList
-            ->onlyGroups(['Asia', 'America'])
-            ->toSelectBox('timezone_default', 'Australia/Melbourne');
-    }
-
-    #[PHPUnit\Test]
     public function normalizeContinentInput()
     {
-        $excludeResult = $this->tzList
-            ->excludeGroups(['asia', 'europe'])
+        $excludeResult = $this->tz
+            ->excludeGroups(['asIa', 'euRope'])
             ->toArray();
         $this->assertIsArray($excludeResult);
         $this->assertNotEmpty($excludeResult);
@@ -211,8 +183,8 @@ class TimezonelistTest extends TestCase
         $this->assertArrayNotHasKey('Europe', $excludeResult);
         $this->assertArrayHasKey('America', $excludeResult);
 
-        $onlyResult = $this->tzList
-            ->onlyGroups(['Asia', 'Europe'])
+        $onlyResult = $this->tz
+            ->onlyGroups(['asIa', 'euRope'])
             ->toArray();
         $this->assertIsArray($onlyResult);
         $this->assertNotEmpty($onlyResult);
@@ -223,17 +195,6 @@ class TimezonelistTest extends TestCase
 
     public function testConstants(): void
     {
-        $this->assertSame('&nbsp;', Timezonelist::HTML_WHITESPACE);
+        $this->assertSame('&nbsp;', Timezone::HTML_WHITESPACE);
     }
-
-    // Example of a dedicated test for normalizeTimezone (if you really need it for isolated testing)
-    // In general, it's better to test via public methods.
-    /*
-    public function testNormalizeTimezone_Dedicated(): void
-    {
-        $this->assertSame('St. Helena', $this->tzList->normalizeTimezone('St_Helena'));
-        $this->assertSame('America / Argentina / Buenos Aires', $this->tzList->normalizeTimezone('America/Argentina/Buenos_Aires'));
-        $this->assertSame('America / Argentina / Buenos Aires', $this->tzList->normalizeTimezone('America/Argentina/Buenos_Aires'));
-    }
-    */
 }
