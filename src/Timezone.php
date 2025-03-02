@@ -209,9 +209,7 @@ final class Timezone
      */
     private function formatTimezone(string $timezoneId, bool $htmlEncode = false): string
     {
-        $rawTzName = !$this->splitGroup || !str_contains($timezoneId, '/') ?
-            $timezoneId
-            : explode('/', $timezoneId, 2)[1];
+        $rawTzName = !$this->splitGroup ? $timezoneId : Util::extractLocation($timezoneId);
         $fmtTzName = str_replace(['St_', '/', '_'], ['St. ', ' / ', ' '], $rawTzName);
 
         if (!$this->showOffset) {
@@ -262,7 +260,7 @@ final class Timezone
     private function validateTimezone(string $timezoneId)
     {
         // When the timezone is invalid
-        if (!in_array($timezoneId, timezone_identifiers_list())) {
+        if (Util::isTimezone($timezoneId) === false) {
             throw new \Realodix\Timezone\Exceptions\InvalidTimezoneException($timezoneId);
         }
 
@@ -270,7 +268,7 @@ final class Timezone
             !empty($this->activeGroups) // when the groups are specified
             && $timezoneId !== 'UTC' // and the timezone is not UTC
             // and the timezone is not in the specified groups
-            && !in_array(explode('/', $timezoneId, 2)[0], $this->activeGroups)
+            && !in_array(Util::extractContinent($timezoneId), $this->activeGroups)
         ) {
             throw new \Realodix\Timezone\Exceptions\TimezoneOutOfScopeException(
                 $timezoneId, $this->activeGroups,
