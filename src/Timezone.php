@@ -272,7 +272,7 @@ class Timezone
      */
     protected function validateTimezone(string $timezoneId)
     {
-        if (!in_array($timezoneId, \DateTimeZone::listIdentifiers())) {
+        if (Utility::isTimezone($timezoneId) === false) {
             throw new \DateInvalidTimeZoneException('Invalid timezone: '.$timezoneId);
         }
         // Check if a filter is applied and if the timezone is within the filter
