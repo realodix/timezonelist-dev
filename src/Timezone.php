@@ -94,24 +94,24 @@ class Timezone
 
         if ($this->splitGroup) {
             if ($this->hasGeneralGroup()) {
-                $list[self::GROUP_GENERAL]['UTC'] = $this->formatTimezone('UTC', false);
+                $list[self::GROUP_GENERAL]['UTC'] = $this->formatTimezone('UTC');
             }
 
             foreach ($this->loadContinents() as $continent => $mask) {
                 $timezoneIds = \DateTimeZone::listIdentifiers($mask);
                 foreach ($timezoneIds as $timezoneId) {
-                    $list[$continent][$timezoneId] = $this->formatTimezone($timezoneId, false);
+                    $list[$continent][$timezoneId] = $this->formatTimezone($timezoneId);
                 }
             }
         } else {
             if ($this->hasGeneralGroup()) {
-                $list['UTC'] = $this->formatTimezone('UTC', false);
+                $list['UTC'] = $this->formatTimezone('UTC');
             }
 
             foreach ($this->loadContinents() as $continent => $mask) {
                 $timezoneIds = \DateTimeZone::listIdentifiers($mask);
                 foreach ($timezoneIds as $timezoneId) {
-                    $list[$timezoneId] = $this->formatTimezone($timezoneId, false);
+                    $list[$timezoneId] = $this->formatTimezone($timezoneId);
                 }
             }
         }
@@ -192,7 +192,7 @@ class Timezone
     protected function makeOptionTag(string $timezoneId, ?string $selected): string
     {
         $attrs = ($selected === $timezoneId) ? ' selected' : '';
-        $display = $this->formatTimezone($timezoneId);
+        $display = $this->formatTimezone($timezoneId, true);
 
         return "<option value=\"{$timezoneId}\"{$attrs}>{$display}</option>";
     }
@@ -228,7 +228,7 @@ class Timezone
      * @param string $timezoneId Timezone identifier (e.g. "America/New_York")
      * @param bool $htmlEncode Whether to HTML-encode the output
      */
-    protected function formatTimezone(string $timezoneId, bool $htmlEncode = true): string
+    protected function formatTimezone(string $timezoneId, bool $htmlEncode = false): string
     {
         $rawTzName = !$this->splitGroup ? $timezoneId : (explode('/', $timezoneId, 2)[1] ?? $timezoneId);
         $fmtTzName = str_replace(['St_', '/', '_'], ['St. ', ' / ', ' '], $rawTzName);
