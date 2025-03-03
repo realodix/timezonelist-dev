@@ -276,9 +276,9 @@ class Timezone
             throw new \DateInvalidTimeZoneException('Invalid timezone: '.$timezoneId);
         }
         // Check if a filter is applied and if the timezone is within the filter
-        if (!empty($this->activeGroups)) {
+        if (!empty($this->activeGroups) && $timezoneId !== 'UTC') {
             $continent = explode('/', $timezoneId)[0];
-            if (!in_array($continent, $this->activeGroups) && $timezoneId !== 'UTC') {
+            if (!in_array($continent, $this->activeGroups)) {
                 asort($this->activeGroups);
                 throw new \InvalidArgumentException(sprintf(
                     'Timezone %s is not within the specified groups: %s',
