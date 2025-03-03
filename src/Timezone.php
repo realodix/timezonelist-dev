@@ -73,8 +73,7 @@ class Timezone
             $timezoneIds = \DateTimeZone::listIdentifiers($mask);
             $options[] = $this->splitGroup ? '<optgroup label="'.$continent.'">' : '';
             foreach ($timezoneIds as $timezoneId) {
-                $continent = $this->splitGroup ? $continent : null;
-                $options[] = $this->makeOptionTag($timezoneId, $selected, $continent);
+                $options[] = $this->makeOptionTag($timezoneId, $selected);
             }
             $options[] = $this->splitGroup ? '</optgroup>' : '';
         }
@@ -95,24 +94,24 @@ class Timezone
 
         if ($this->splitGroup) {
             if ($this->hasGeneralGroup()) {
-                $list[self::GROUP_GENERAL]['UTC'] = $this->formatTimezone('UTC', htmlEncode: false);
+                $list[self::GROUP_GENERAL]['UTC'] = $this->formatTimezone('UTC', false);
             }
 
             foreach ($this->loadContinents() as $continent => $mask) {
                 $timezoneIds = \DateTimeZone::listIdentifiers($mask);
                 foreach ($timezoneIds as $timezoneId) {
-                    $list[$continent][$timezoneId] = $this->formatTimezone($timezoneId, $continent, false);
+                    $list[$continent][$timezoneId] = $this->formatTimezone($timezoneId, false);
                 }
             }
         } else {
             if ($this->hasGeneralGroup()) {
-                $list['UTC'] = $this->formatTimezone('UTC', htmlEncode: false);
+                $list['UTC'] = $this->formatTimezone('UTC', false);
             }
 
             foreach ($this->loadContinents() as $continent => $mask) {
                 $timezoneIds = \DateTimeZone::listIdentifiers($mask);
                 foreach ($timezoneIds as $timezoneId) {
-                    $list[$timezoneId] = $this->formatTimezone($timezoneId, htmlEncode: false);
+                    $list[$timezoneId] = $this->formatTimezone($timezoneId, false);
                 }
             }
         }
@@ -189,12 +188,11 @@ class Timezone
      *
      * @param string $timezoneId Timezone identifier (e.g. "America/New_York")
      * @param string|null $selected The value of the option to be pre-selected
-     * @param string|null $continent The continent name
      */
-    protected function makeOptionTag(string $timezoneId, ?string $selected, ?string $continent = null): string
+    protected function makeOptionTag(string $timezoneId, ?string $selected): string
     {
         $attrs = ($selected === $timezoneId) ? ' selected' : '';
-        $display = $this->formatTimezone($timezoneId, $continent);
+        $display = $this->formatTimezone($timezoneId);
 
         return "<option value=\"{$timezoneId}\"{$attrs}>{$display}</option>";
     }
@@ -228,23 +226,21 @@ class Timezone
      * and offset.
      *
      * @param string $timezoneId Timezone identifier (e.g. "America/New_York")
-     * @param string|null $continent The continent name to remove from
-     *                               the timezone name (if applicable)
      * @param bool $htmlEncode Whether to HTML-encode the output
      */
-    protected function formatTimezone(string $timezoneId, ?string $continent = null, bool $htmlEncode = true): string
+    protected function formatTimezone(string $timezoneId, bool $htmlEncode = true): string
     {
-        $displayedTz = empty($continent) ? $timezoneId : substr($timezoneId, strlen($continent) + 1);
-        $normalizedTz = str_replace(['St_', '/', '_'], ['St. ', ' / ', ' '], $displayedTz);
+        $rawTzName = !$this->splitGroup ? $timezoneId : (explode('/', $timezoneId, 2)[1] ?? $timezoneId);
+        $fmtTzName = str_replace(['St_', '/', '_'], ['St. ', ' / ', ' '], $rawTzName);
 
         if (!$this->showOffset) {
-            return $normalizedTz;
+            return $fmtTzName;
         }
 
         $offset = (new \DateTime('', new \DateTimeZone($timezoneId)))->format('P');
         $separator = $htmlEncode ? str_repeat(self::HTML_WHITESPACE, 3) : ' ';
 
-        return "(UTC{$offset})".$separator.$normalizedTz;
+        return "(UTC{$offset})".$separator.$fmtTzName;
     }
 
     /**
