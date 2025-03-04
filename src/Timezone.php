@@ -2,8 +2,6 @@
 
 namespace Realodix\Timezone;
 
-use Illuminate\Support\Str;
-
 final class Timezone
 {
     const HTML_WHITESPACE = '&nbsp;';
@@ -119,9 +117,7 @@ final class Timezone
      */
     public function onlyGroups(array $groups)
     {
-        $groups = array_map(fn($group) => Str::title($group), $groups);
-        $this->validateGroups($groups);
-        $this->activeGroups = $groups;
+        $this->activeGroups = $this->processGroupNames($groups);
 
         return $this;
     }
@@ -134,26 +130,21 @@ final class Timezone
      */
     public function excludeGroups(array $groups)
     {
-        $groups = array_map(fn($group) => Str::title($group), $groups);
-        $this->validateGroups($groups);
+        $groups = $this->processGroupNames($groups);
 
-        $this->activeGroups = collect(self::CONTINENTS)
-            ->keys()->diff($groups)
-            ->when(!in_array(self::GROUP_GENERAL, $groups), function ($c) {
-                $c->push(self::GROUP_GENERAL);
-            })->all();
+        $this->activeGroups = $this->getGroups()
+            ->diff($groups)
+            ->all();
 
         return $this;
     }
 
     /**
-     * Disables the grouping of timezones by continent
-     *
-     * This method flattens the timezone list, removing the continental grouping.
+     * Flattens the timezone list, removing the continental grouping.
      *
      * @return $this
      */
-    public function disableGrouping()
+    public function flatten()
     {
         $this->splitGroup = false;
 
@@ -218,7 +209,9 @@ final class Timezone
      */
     private function formatTimezone(string $timezoneId, bool $htmlEncode = false): string
     {
-        $rawTzName = !$this->splitGroup ? $timezoneId : (explode('/', $timezoneId, 2)[1] ?? $timezoneId);
+        $rawTzName = !$this->splitGroup || !str_contains($timezoneId, '/') ?
+            $timezoneId
+            : explode('/', $timezoneId, 2)[1];
         $fmtTzName = str_replace(['St_', '/', '_'], ['St. ', ' / ', ' '], $rawTzName);
 
         if (!$this->showOffset) {
@@ -232,20 +225,32 @@ final class Timezone
     }
 
     /**
-     * Validate a list of groups
+     * Get all defined group names (continents and the general).
      *
-     * @param array<string> $groups
-     * @return void
+     * @return \Illuminate\Support\Collection<int, string>
      */
-    private function validateGroups(array $groups)
+    private function getGroups()
     {
-        $validGroups = array_merge(array_keys(self::CONTINENTS), [self::GROUP_GENERAL]);
-        $invalidGroups = array_diff($groups, $validGroups);
+        return collect(self::CONTINENTS)
+            ->keys()
+            ->push(self::GROUP_GENERAL);
+    }
+
+    /**
+     * Processes the given group names by uppercasing the first character
+     * and ensuring they are valid.
+     */
+    private function processGroupNames(array $groups): array
+    {
+        $groups = array_map(fn($group) => ucfirst($group), $groups);
+        $invalidGroups = array_diff($groups, $this->getGroups()->all());
 
         // When the groups are invalid
         if (!empty($invalidGroups)) {
             throw new \Realodix\Timezone\Exceptions\InvalidGroupException($invalidGroups);
         }
+
+        return $groups;
     }
 
     /**
@@ -261,13 +266,15 @@ final class Timezone
             throw new \Realodix\Timezone\Exceptions\InvalidTimezoneException($timezoneId);
         }
 
-        // When the timezone is not within the specified groups
-        if (!empty($this->activeGroups) && $timezoneId !== 'UTC') {
-            if (!in_array(explode('/', $timezoneId, 2)[0], $this->activeGroups)) {
-                throw new \Realodix\Timezone\Exceptions\TimezoneOutOfScopeException(
-                    $timezoneId, $this->activeGroups,
-                );
-            }
+        if (
+            !empty($this->activeGroups) // when the groups are specified
+            && $timezoneId !== 'UTC' // and the timezone is not UTC
+            // and the timezone is not in the specified groups
+            && !in_array(explode('/', $timezoneId, 2)[0], $this->activeGroups)
+        ) {
+            throw new \Realodix\Timezone\Exceptions\TimezoneOutOfScopeException(
+                $timezoneId, $this->activeGroups,
+            );
         }
     }
 }
