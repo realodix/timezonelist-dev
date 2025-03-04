@@ -80,7 +80,7 @@ class TimezoneTest extends TestCase
 
     public function testToSelectBox_WithoutGroup_WithOffset(): void
     {
-        $output = $this->tz->disableGrouping()->toSelectBox('timezone_without_group_offset');
+        $output = $this->tz->flatten()->toSelectBox('timezone_without_group_offset');
         $this->assertStringStartsWith('<select name="timezone_without_group_offset"', $output);
         $this->assertStringNotContainsString('<optgroup label="Africa">', $output);
         $this->assertStringContainsString('<option value="Africa/Abidjan">(UTC', $output);
@@ -104,7 +104,7 @@ class TimezoneTest extends TestCase
 
     public function testToSelectBox_WithoutGroup_WithoutOffset(): void
     {
-        $output = $this->tz->disableGrouping()->omitOffset()->toSelectBox('timezone_no_group_no_offset');
+        $output = $this->tz->flatten()->omitOffset()->toSelectBox('timezone_no_group_no_offset');
         $this->assertStringStartsWith('<select name="timezone_no_group_no_offset"', $output);
         $this->assertStringNotContainsString('<optgroup label="Africa">', $output);
         $this->assertStringNotContainsString('(UTC', $output);
@@ -145,7 +145,7 @@ class TimezoneTest extends TestCase
         $outputWithGroup = $this->tz->toSelectBox('timezone_split_true');
         $this->assertStringContainsString('<optgroup', $outputWithGroup, 'Asserting optgroup tag exists when splitGroup is true');
 
-        $outputWithoutGroup = $this->tz->disableGrouping()->toSelectBox('timezone_split_false');
+        $outputWithoutGroup = $this->tz->flatten()->toSelectBox('timezone_split_false');
         $this->assertStringNotContainsString('<optgroup', $outputWithoutGroup, 'Asserting optgroup tag does not exist when splitGroup is false');
     }
 
@@ -175,7 +175,7 @@ class TimezoneTest extends TestCase
     public function normalizeContinentInput()
     {
         $excludeResult = $this->tz
-            ->excludeGroups(['asIa', 'euRope'])
+            ->excludeGroups(['asia', 'europe'])
             ->toArray();
         $this->assertIsArray($excludeResult);
         $this->assertNotEmpty($excludeResult);
@@ -184,7 +184,7 @@ class TimezoneTest extends TestCase
         $this->assertArrayHasKey('America', $excludeResult);
 
         $onlyResult = $this->tz
-            ->onlyGroups(['asIa', 'euRope'])
+            ->onlyGroups(['asia', 'europe'])
             ->toArray();
         $this->assertIsArray($onlyResult);
         $this->assertNotEmpty($onlyResult);

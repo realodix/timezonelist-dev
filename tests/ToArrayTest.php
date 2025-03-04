@@ -19,7 +19,7 @@ class ToArrayTest extends TestCase
     public function noGroup_noFilter()
     {
         $result = $this->tz
-            ->disableGrouping()
+            ->flatten()
             ->toArray();
 
         $this->assertIsArray($result);
@@ -69,7 +69,7 @@ class ToArrayTest extends TestCase
     public function noGroup_withFilter()
     {
         $result = $this->tz
-            ->disableGrouping()
+            ->flatten()
             ->onlyGroups(['General', 'Arctic'])
             ->toArray();
 

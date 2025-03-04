@@ -12,8 +12,8 @@ echo $tz->toSelectBox('timezone_default', 'America/New_York');
 
 $tz = new \Realodix\Timezone\Timezone;
 echo '<br><br>';
-echo 'disableGrouping() <br>';
-echo $tz->disableGrouping()
+echo 'flatten() <br>';
+echo $tz->flatten()
     ->toSelectBox('timezone_default', 'America/New_York');
 
 $tz = new \Realodix\Timezone\Timezone;
@@ -24,8 +24,8 @@ echo $tz->onlyGroups(['America', 'Asia'])
 
 $tz = new \Realodix\Timezone\Timezone;
 echo '<br><br>';
-echo 'disableGrouping()->onlyGroups([\'America\', \'Asia\']) <br>';
-echo $tz->disableGrouping()->onlyGroups(['America', 'Asia'])
+echo 'flatten()->onlyGroups([\'America\', \'Asia\']) <br>';
+echo $tz->flatten()->onlyGroups(['America', 'Asia'])
     ->toSelectBox('timezone_default', 'America/New_York');
 
 $tz = new \Realodix\Timezone\Timezone;

@@ -106,7 +106,7 @@ Realodix\Timezone provides several methods to customize the timezone list:
 
 - `onlyGroups(array $groups)`: Includes only the specified continent/group names. For example, `$tz->onlyGroups(['America', 'Europe'])` will only return timezones within the America and Europe continents.
 - `excludeGroups(array $groups)`: Excludes the specified continent/group names. For example, `$tz->excludeGroups(['Arctic'])` will exclude all timezones from Africa.
-- `disableGrouping()`: Flattens the timezone list, removing the continental grouping.
+- `flatten()`: Flattens the timezone list, removing the continental grouping.
 - `omitOffset()`: Removes the UTC offset from the displayed timezone names.
 
 #### Timezones groups
